@@ -56,15 +56,15 @@ def neural_network(X):
 
 # MODEL
 with tf.name_scope("model"):
-    W_0 = Normal(loc=tf.zeros([D, neurons]), scale=tf.ones([D, neurons]), name="W_0")
-    b_0 = Normal(loc=tf.zeros(neurons), scale=tf.ones(neurons), name="b_0")
+    W_0 = Normal(loc=tf.zeros([D, neurons]), scale=1e20*tf.ones([D, neurons]), name="W_0")
+    b_0 = Normal(loc=tf.zeros(neurons), scale=1e20*tf.ones(neurons), name="b_0")
 
     if layers == 2:
-        W_1 = Normal(loc=tf.zeros([neurons, neurons]), scale=tf.ones([neurons, neurons]), name="W_1")
-        b_1 = Normal(loc=tf.zeros(neurons), scale=tf.ones(neurons), name="b_1")
+        W_1 = Normal(loc=tf.zeros([neurons, neurons]), scale=1e20*tf.ones([neurons, neurons]), name="W_1")
+        b_1 = Normal(loc=tf.zeros(neurons), scale=1e20*tf.ones(neurons), name="b_1")
 
-    W_2 = Normal(loc=tf.zeros([neurons, K]), scale=tf.ones([neurons, K]), name="W_2")
-    b_2 = Normal(loc=tf.zeros(K), scale=tf.ones(K), name="b_2")
+    W_2 = Normal(loc=tf.zeros([neurons, K]), scale=1e20*tf.ones([neurons, K]), name="W_2")
+    b_2 = Normal(loc=tf.zeros(K), scale=1e20*tf.ones(K), name="b_2")
 
     X = tf.placeholder(tf.float32, [None, D], name="X")
     y = Categorical(neural_network(X), name="y")
@@ -72,21 +72,20 @@ with tf.name_scope("model"):
 # INFERENCE
 with tf.name_scope("posterior"):
     with tf.name_scope("qW_0"):
-        qW_0 = PointMass(tf.Variable(tf.random_normal([D, neurons]), name="loc"))
+        qW_0 = PointMass(tf.get_variable("qW0", shape=[D, neurons], initializer=tf.contrib.layers.xavier_initializer()))
     with tf.name_scope("qb_0"):
-        qb_0 = PointMass(tf.Variable(tf.random_normal([neurons]), name="loc"))
-    
+        qb_0 = PointMass(tf.get_variable("qb0", shape=[neurons], initializer=tf.contrib.layers.xavier_initializer()))
+        
     if layers == 2:
         with tf.name_scope("qW_1"):
-            qW_1 = PointMass(tf.Variable(tf.random_normal([neurons, neurons]), name="loc"))
+            qW_1 = PointMass(tf.get_variable("qW1", shape=[neurons, neurons], initializer=tf.contrib.layers.xavier_initializer()))
         with tf.name_scope("qb_1"):
-            qb_1 = PointMass(tf.Variable(tf.random_normal([neurons]), name="loc"))
+            qb_1 = PointMass(tf.get_variable("qb1", shape=[neurons], initializer=tf.contrib.layers.xavier_initializer()))
 
     with tf.name_scope("qW_2"):
-        qW_2 = PointMass(tf.Variable(tf.random_normal([neurons, K]), name="loc"))
+        qW_2 = PointMass(tf.get_variable("qW2", shape=[neurons, K], initializer=tf.contrib.layers.xavier_initializer()))
     with tf.name_scope("qb_2"):
-        qb_2 = PointMass(tf.Variable(tf.random_normal([K]), name="loc"))
-
+        qb_2 = PointMass(tf.get_variable("qb2", shape=[K], initializer=tf.contrib.layers.xavier_initializer()))
 
 # In[9]:
 
@@ -99,23 +98,22 @@ def eval_acc_auc(dataset):
     for _ in tqdm(range(dataset.num_examples//eval_batch_size)):
         X, y = mnist.test.next_batch(eval_batch_size, shuffle=False)
         prob_lst_temp = []
-        for _ in range(n_samples):
-            W0_samp = qW_0.sample()
-            b0_samp = qb_0.sample()
-            if layers == 2:
-                W1_samp = qW_1.sample()
-                b1_samp = qb_1.sample()
-            W2_samp = qW_2.sample()
-            b2_samp = qb_2.sample()
+        W0_samp = qW_0.sample()
+        b0_samp = qb_0.sample()
+        if layers == 2:
+            W1_samp = qW_1.sample()
+            b1_samp = qb_1.sample()
+        W2_samp = qW_2.sample()
+        b2_samp = qb_2.sample()
 
-            h_samp = tf.nn.relu(tf.matmul(X, W0_samp) + b0_samp)
-            if layers == 2:
-                h_samp = tf.nn.relu(tf.matmul(h_samp, W1_samp) + b1_samp)
-            h_samp = tf.matmul(h_samp, W2_samp) + b2_samp
-            prob = tf.nn.softmax(h_samp)
+        h_samp = tf.nn.relu(tf.matmul(X, W0_samp) + b0_samp)
+        if layers == 2:
+            h_samp = tf.nn.relu(tf.matmul(h_samp, W1_samp) + b1_samp)
+        h_samp = tf.matmul(h_samp, W2_samp) + b2_samp
+        prob = tf.nn.softmax(h_samp)
 
-            # Also compue the probabiliy of each class for each (w,b) sample.
-            prob_lst_temp.append(prob.eval())
+        # Also compue the probabiliy of each class for each (w,b) sample.
+        prob_lst_temp.append(prob.eval())
         pred_lst.append(np.argmax(np.mean(prob_lst_temp,axis=0),axis=1))
         prob_lst.append(np.max(np.mean(prob_lst_temp,axis=0),axis=1))
         Y.append(y)
@@ -144,7 +142,7 @@ elif layers == 2:
                          W_1: qW_1, b_1: qb_1,
                          W_2: qW_2, b_2: qb_2}, data={y: y_ph})
     
-inference.initialize(n_iter=iters, n_print=100, scale={y: float(mnist.train.num_examples) / N})
+inference.initialize(n_iter=iters, n_print=100, optimizer='adam', scale={y: float(mnist.train.num_examples) / N})
 
 sess = tf.InteractiveSession()
 

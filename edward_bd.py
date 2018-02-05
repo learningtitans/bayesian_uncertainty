@@ -1,8 +1,6 @@
-
 # coding: utf-8
 
 # In[1]:
-
 import sys
 import numpy as np
 from tqdm import tqdm
@@ -14,7 +12,7 @@ ed.set_seed(42)
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 
-from edward.models import Normal, Categorical
+from edward.models import Normal, Categorical, PointMass
 
 
 # In[2]:
@@ -34,7 +32,6 @@ layers = int(sys.argv[2])
 epochs = 100
 n_samples = 100
 eval_batch_size = 5000
-
 iters = int(mnist.train.num_examples/N*epochs)
 
 
@@ -49,23 +46,23 @@ Y_val = np.argmax(mnist.validation.labels,axis=1)
 
 
 def neural_network(X):
-    h = tf.nn.relu(tf.matmul(X, W_0) + b_0)
+    h = tf.layers.dropout(tf.nn.relu(tf.matmul(X, W_0) + b_0), training=True)
     if layers == 2:
-        h = tf.nn.relu(tf.matmul(h, W_1) + b_1)
+        h = tf.layers.dropout(tf.nn.relu(tf.matmul(h, W_1) + b_1), training=True)
     h = tf.matmul(h, W_2) + b_2
     return h
 
 # MODEL
 with tf.name_scope("model"):
-    W_0 = Normal(loc=tf.zeros([D, neurons]), scale=tf.ones([D, neurons]), name="W_0")
-    b_0 = Normal(loc=tf.zeros(neurons), scale=tf.ones(neurons), name="b_0")
-    
+    W_0 = Normal(loc=tf.zeros([D, neurons]), scale=1e20*tf.ones([D, neurons]), name="W_0")
+    b_0 = Normal(loc=tf.zeros(neurons), scale=1e20*tf.ones(neurons), name="b_0")
+
     if layers == 2:
-        W_1 = Normal(loc=tf.zeros([neurons, neurons]), scale=tf.ones([neurons, neurons]), name="W_1")
-        b_1 = Normal(loc=tf.zeros(neurons), scale=tf.ones(neurons), name="b_1")
-    
-    W_2 = Normal(loc=tf.zeros([neurons, K]), scale=tf.ones([neurons, K]), name="W_2")
-    b_2 = Normal(loc=tf.zeros(K), scale=tf.ones(K), name="b_2")
+        W_1 = Normal(loc=tf.zeros([neurons, neurons]), scale=1e20*tf.ones([neurons, neurons]), name="W_1")
+        b_1 = Normal(loc=tf.zeros(neurons), scale=1e20*tf.ones(neurons), name="b_1")
+
+    W_2 = Normal(loc=tf.zeros([neurons, K]), scale=1e20*tf.ones([neurons, K]), name="W_2")
+    b_2 = Normal(loc=tf.zeros(K), scale=1e20*tf.ones(K), name="b_2")
 
     X = tf.placeholder(tf.float32, [None, D], name="X")
     y = Categorical(neural_network(X), name="y")
@@ -73,35 +70,22 @@ with tf.name_scope("model"):
 # INFERENCE
 with tf.name_scope("posterior"):
     with tf.name_scope("qW_0"):
-        qW_0 = Normal(loc=tf.Variable(tf.random_normal([D, neurons]), name="loc"),
-                      scale=tf.nn.softplus(
-                          tf.Variable(tf.random_normal([D, neurons]), name="scale")))
+        qW_0 = PointMass(tf.get_variable("qW0", shape=[D, neurons], initializer=tf.contrib.layers.xavier_initializer()))
     with tf.name_scope("qb_0"):
-        qb_0 = Normal(loc=tf.Variable(tf.random_normal([neurons]), name="loc"),
-                      scale=tf.nn.softplus(
-                          tf.Variable(tf.random_normal([neurons]), name="scale")))
-    
+        qb_0 = PointMass(tf.get_variable("qb0", shape=[neurons], initializer=tf.contrib.layers.xavier_initializer()))
+        
     if layers == 2:
         with tf.name_scope("qW_1"):
-            qW_1 = Normal(loc=tf.Variable(tf.random_normal([neurons, neurons]), name="loc"),
-                          scale=tf.nn.softplus(
-                              tf.Variable(tf.random_normal([neurons, neurons]), name="scale")))        
+            qW_1 = PointMass(tf.get_variable("qW1", shape=[neurons, neurons], initializer=tf.contrib.layers.xavier_initializer()))
         with tf.name_scope("qb_1"):
-            qb_1 = Normal(loc=tf.Variable(tf.random_normal([neurons]), name="loc"),
-                          scale=tf.nn.softplus(
-                              tf.Variable(tf.random_normal([neurons]), name="scale")))
-        
+            qb_1 = PointMass(tf.get_variable("qb1", shape=[neurons], initializer=tf.contrib.layers.xavier_initializer()))
+
     with tf.name_scope("qW_2"):
-        qW_2 = Normal(loc=tf.Variable(tf.random_normal([neurons, K]), name="loc"),
-                      scale=tf.nn.softplus(
-                          tf.Variable(tf.random_normal([neurons, K]), name="scale")))
+        qW_2 = PointMass(tf.get_variable("qW2", shape=[neurons, K], initializer=tf.contrib.layers.xavier_initializer()))
     with tf.name_scope("qb_2"):
-        qb_2 = Normal(loc=tf.Variable(tf.random_normal([K]), name="loc"),
-                      scale=tf.nn.softplus(
-                          tf.Variable(tf.random_normal([K]), name="scale")))
+        qb_2 = PointMass(tf.get_variable("qb2", shape=[K], initializer=tf.contrib.layers.xavier_initializer()))
 
-
-# In[7]:
+# In[6]:
 
 
 def eval_acc_auc(dataset):
@@ -121,9 +105,9 @@ def eval_acc_auc(dataset):
             W2_samp = qW_2.sample()
             b2_samp = qb_2.sample()
 
-            h_samp = tf.nn.relu(tf.matmul(X, W0_samp) + b0_samp)
+            h_samp = tf.layers.dropout(tf.nn.relu(tf.matmul(X, W0_samp) + b0_samp), training=True)
             if layers == 2:
-                h_samp = tf.nn.relu(tf.matmul(h_samp, W1_samp) + b1_samp)
+                h_samp = tf.layers.dropout(tf.nn.relu(tf.matmul(h_samp, W1_samp) + b1_samp), training=True)
             h_samp = tf.matmul(h_samp, W2_samp) + b2_samp
             prob = tf.nn.softmax(h_samp)
 
@@ -132,7 +116,7 @@ def eval_acc_auc(dataset):
         pred_lst.append(np.argmax(np.mean(prob_lst_temp,axis=0),axis=1))
         prob_lst.append(np.max(np.mean(prob_lst_temp,axis=0),axis=1))
         Y.append(y)
-
+        
     Y_pred = np.concatenate(pred_lst)
     Y_prob = np.concatenate(prob_lst)
     Y_actual = np.argmax(np.concatenate(Y), axis=1)
@@ -150,10 +134,10 @@ def eval_acc_auc(dataset):
 y_ph = tf.placeholder(tf.int32, [N])
 
 if layers == 1:
-    inference = ed.KLqp({W_0: qW_0, b_0: qb_0,
+    inference = ed.MAP({W_0: qW_0, b_0: qb_0,
                          W_2: qW_2, b_2: qb_2}, data={y: y_ph})
 elif layers == 2:
-    inference = ed.KLqp({W_0: qW_0, b_0: qb_0,
+    inference = ed.MAP({W_0: qW_0, b_0: qb_0,
                          W_1: qW_1, b_1: qb_1,
                          W_2: qW_2, b_2: qb_2}, data={y: y_ph})
     
@@ -177,4 +161,5 @@ for i in range(1, inference.n_iter+1):
 
 X_test = mnist.test.images
 Y_test = np.argmax(mnist.test.labels,axis=1)
-print('ADVI', neurons, layers, epochs, n_samples, eval_acc_auc(mnist.test))
+print('BD', neurons, layers, epochs, n_samples, eval_acc_auc(mnist.test))
+
