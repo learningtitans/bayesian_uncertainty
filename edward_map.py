@@ -56,15 +56,15 @@ def neural_network(X):
 
 # MODEL
 with tf.name_scope("model"):
-    W_0 = Normal(loc=tf.zeros([D, neurons]), scale=1e20*tf.ones([D, neurons]), name="W_0")
-    b_0 = Normal(loc=tf.zeros(neurons), scale=1e20*tf.ones(neurons), name="b_0")
+    W_0 = Normal(loc=tf.zeros([D, neurons]), scale=tf.ones([D, neurons]), name="W_0")
+    b_0 = Normal(loc=tf.zeros(neurons), scale=tf.ones(neurons), name="b_0")
 
     if layers == 2:
-        W_1 = Normal(loc=tf.zeros([neurons, neurons]), scale=1e20*tf.ones([neurons, neurons]), name="W_1")
-        b_1 = Normal(loc=tf.zeros(neurons), scale=1e20*tf.ones(neurons), name="b_1")
+        W_1 = Normal(loc=tf.zeros([neurons, neurons]), scale=tf.ones([neurons, neurons]), name="W_1")
+        b_1 = Normal(loc=tf.zeros(neurons), scale=tf.ones(neurons), name="b_1")
 
-    W_2 = Normal(loc=tf.zeros([neurons, K]), scale=1e20*tf.ones([neurons, K]), name="W_2")
-    b_2 = Normal(loc=tf.zeros(K), scale=1e20*tf.ones(K), name="b_2")
+    W_2 = Normal(loc=tf.zeros([neurons, K]), scale=tf.ones([neurons, K]), name="W_2")
+    b_2 = Normal(loc=tf.zeros(K), scale=tf.ones(K), name="b_2")
 
     X = tf.placeholder(tf.float32, [None, D], name="X")
     y = Categorical(neural_network(X), name="y")
