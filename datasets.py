@@ -42,12 +42,12 @@ def make_datasets(year=False, fake=True):
         datasets['year'] =  Data(df.iloc[:, 1:], df.iloc[:, 0])
 
     if fake:
-        datasets['make_regression'] = Data(*make_regression(20000, noise=1.0))
+        datasets['make_regression'] = Data(*make_regression(100000, noise=1.0))
 
-        datasets['make_friedman1'] = Data(*make_friedman1(20000, noise=1.0))
+        datasets['make_friedman1'] = Data(*make_friedman1(100000, noise=1.0))
 
-        datasets['make_friedman2'] = Data(*make_friedman2(20000, noise=1.0))
+        datasets['make_friedman2'] = Data(*make_friedman2(100000, noise=1.0))
 
-        datasets['make_friedman3'] = Data(*make_friedman3(20000, noise=1.0))
+        datasets['make_friedman3'] = Data(*make_friedman3(100000, noise=1.0))
     
     return datasets
