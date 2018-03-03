@@ -3,6 +3,7 @@ from sklearn import linear_model
 from sklearn import ensemble
 from sklearn.base import BaseEstimator, RegressorMixin
 import numpy as np
+import scipy.stats
 
 class LinearRegression(BaseEstimator, RegressorMixin):  
     def __init__(self):
@@ -35,8 +36,9 @@ class BayesianLinearRegression(BaseEstimator, RegressorMixin):
     
 class GBTQuantile(BaseEstimator, RegressorMixin):  
     def __init__(self):
-        self.gbt_lower = ensemble.GradientBoostingRegressor(loss='quantile', alpha=0.158)
-        self.gbt_upper = ensemble.GradientBoostingRegressor(loss='quantile', alpha=1-0.158)
+        percentile = scipy.stats.norm.cdf(-1) # One Gaussian std
+        self.gbt_lower = ensemble.GradientBoostingRegressor(loss='quantile', alpha=percentile)
+        self.gbt_upper = ensemble.GradientBoostingRegressor(loss='quantile', alpha=1-percentile)
         self.gbt_median = ensemble.GradientBoostingRegressor(loss='quantile', alpha=0.5)
         
     def fit(self, X, y):
@@ -47,10 +49,31 @@ class GBTQuantile(BaseEstimator, RegressorMixin):
 
     def predict(self, X, y=None):
         pred_mean = self.gbt_median.predict(X)
-        pred_std = self.gbt_upper.predict(X) - self.gbt_lower.predict(X)
+        pred_std = (self.gbt_upper.predict(X) - self.gbt_lower.predict(X))/2
         return pred_mean, pred_std
+
+
+class RFUncertainty(BaseEstimator, RegressorMixin):
+    """
+    Based on: http://blog.datadive.net/prediction-intervals-for-random-forests/
+    """
+    def __init__(self):
+        self.rf = ensemble.RandomForestRegressor(n_estimators=100)
+        
+    def fit(self, X, y):
+        self.rf.fit(X, y)
+        return self
     
-    
+    def predict(self, X, y=None):
+        pred_mean = self.rf.predict(X)
+        percentile = scipy.stats.norm.cdf(-1) # One Gaussian std
+        dt_pred = np.vstack([dt.predict(X) for dt in self.rf.estimators_])
+        err_down = np.percentile(dt_pred, 100*percentile, axis=0)
+        err_up = np.percentile(dt_pred, 100*(1-percentile), axis=0)
+        pred_std = (err_up - err_down)/2
+        return pred_mean, pred_std
+
+
 class XGBaseline(BaseEstimator, RegressorMixin):  
     def __init__(self, n_estimators=100, learning_rate=0.1, max_depth=3, subsample=1):
         self.n_estimators = n_estimators
