@@ -53,6 +53,22 @@ class GBTQuantile(BaseEstimator, RegressorMixin):
         return pred_mean, pred_std
 
 
+class RFBaseline(BaseEstimator, RegressorMixin):
+    def __init__(self):
+        self.rf = ensemble.RandomForestRegressor(n_estimators=100)
+        
+    def fit(self, X, y):
+        self.rf.fit(X, y)
+        errors = y - self.rf.predict(X)
+        self.std = np.std(errors)
+        return self
+    
+    def predict(self, X, y=None):
+        pred_mean = self.rf.predict(X)
+        pred_std = self.std * np.ones(len(pred_mean))
+        return pred_mean, pred_std
+    
+    
 class RFUncertainty(BaseEstimator, RegressorMixin):
     """
     Based on: http://blog.datadive.net/prediction-intervals-for-random-forests/
@@ -62,6 +78,8 @@ class RFUncertainty(BaseEstimator, RegressorMixin):
         
     def fit(self, X, y):
         self.rf.fit(X, y)
+        errors = y - self.rf.predict(X)
+        self.std = np.std(errors)
         return self
     
     def predict(self, X, y=None):
@@ -71,6 +89,7 @@ class RFUncertainty(BaseEstimator, RegressorMixin):
         err_down = np.percentile(dt_pred, 100*percentile, axis=0)
         err_up = np.percentile(dt_pred, 100*(1-percentile), axis=0)
         pred_std = (err_up - err_down)/2
+        pred_std[pred_std <= 0] = self.std
         return pred_mean, pred_std
 
 

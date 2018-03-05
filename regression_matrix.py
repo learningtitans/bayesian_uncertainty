@@ -11,11 +11,11 @@ from itertools import product
 
 from datasets import make_datasets
 from metrics import normal_nll, rmse, mae, auc_rmse, auc_mae
-from shallow_models import LinearRegression, BayesianLinearRegression, GBTQuantile, RFUncertainty, XGBaseline, XGBLogLikelihood
+from shallow_models import LinearRegression, BayesianLinearRegression, RFBaseline, RFUncertainty, GBTQuantile, XGBaseline, XGBLogLikelihood
 
 datasets = make_datasets(year=False)
 
-models = [LinearRegression, BayesianLinearRegression, GBTQuantile, RFUncertainty, XGBaseline, XGBLogLikelihood]
+models = [LinearRegression, BayesianLinearRegression, RFBaseline, RFUncertainty, GBTQuantile, XGBaseline, XGBLogLikelihood]
 
 Results = namedtuple('Results', 'datetime dataset model shape cv_metrics normal_nll rmse mae auc_rmse auc_mae')
 
@@ -34,21 +34,21 @@ def eval_dataset_model(d, X, y, model):
     elif d.startswith('make'):
         cv = KFold(n_splits=5)#ShuffleSplit(1, test_size=0.8)
     else:
-        cv = KFold(n_splits=10)#RepeatedKFold(n_splits=10, n_repeats=1)
+        cv = RepeatedKFold(n_splits=10, n_repeats=4)
     
     reg = model()
     cv_metrics = []
     for train_index, test_index in cv.split(X):
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
-        reg.fit(X, y)
-        pred_mean, pred_std = reg.predict(X)
+        reg.fit(X_train, y_train)
+        pred_mean, pred_std = reg.predict(X_test)
         cv_metrics.append((
-            normal_nll(y, pred_mean, pred_std),
-            rmse(y, pred_mean),
-            mae(y, pred_mean),
-            auc_rmse(y, pred_mean, pred_std),
-            auc_mae(y, pred_mean, pred_std)))
+            normal_nll(y_test, pred_mean, pred_std),
+            rmse(y_test, pred_mean),
+            mae(y_test, pred_mean),
+            auc_rmse(y_test, pred_mean, pred_std),
+            auc_mae(y_test, pred_mean, pred_std)))
 
     metrics_mean = np.mean(cv_metrics, axis = 0)
     metrics_stderr = scipy.stats.sem(cv_metrics, axis = 0)
