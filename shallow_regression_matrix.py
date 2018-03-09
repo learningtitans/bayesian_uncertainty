@@ -2,7 +2,6 @@ from sklearn.model_selection import cross_validate, ShuffleSplit, KFold, Repeate
 from sklearn.metrics import make_scorer
 from datetime import datetime
 from joblib import Parallel, delayed
-from collections import namedtuple
 import numpy as np
 import scipy
 import pickle
@@ -10,14 +9,12 @@ import json
 from itertools import product
 
 from datasets import make_datasets
-from metrics import normal_nll, rmse, mae, auc_rmse, auc_mae
+from metrics import normal_nll, rmse, mae, auc_rmse, auc_mae, Results
 from shallow_models import LinearRegression, BayesianLinearRegression, RFBaseline, RFUncertainty, GBTQuantile, XGBaseline, XGBLogLikelihood
 
 datasets = make_datasets(year=False)
 
 models = [LinearRegression, BayesianLinearRegression, RFBaseline, RFUncertainty, GBTQuantile, XGBaseline, XGBLogLikelihood]
-
-Results = namedtuple('Results', 'datetime dataset model shape cv_metrics normal_nll rmse mae auc_rmse auc_mae')
 
 
 def eval_dataset_model(d, X, y, model):    

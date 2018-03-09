@@ -1,5 +1,9 @@
 import numpy as np
 from scipy import stats, optimize
+from collections import namedtuple
+
+
+Results = namedtuple('Results', 'datetime dataset model shape normal_nll rmse mae auc_rmse auc_mae')
 
 
 def normal_nll(actual, pred, std):

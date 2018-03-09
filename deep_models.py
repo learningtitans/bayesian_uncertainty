@@ -5,9 +5,11 @@ import scipy.stats
 from keras.layers.core import Lambda
 from keras import backend as K
 from keras.datasets import mnist
-from keras.models import Sequential
-from keras.layers import Dense, Dropout
+from keras.models import Sequential, Model
+from keras.layers import Dense, Dropout, Input, concatenate
 from keras.optimizers import Adam
+
+from tensorflow.contrib.distributions import Normal
 
 BATCH_SIZE = 100
 N_EPOCHS = 50
@@ -41,6 +43,44 @@ class MLPBayesianDropout(BaseEstimator, RegressorMixin):
         pred = [self.model.predict(X).reshape(-1) for _ in range(BD_SAMPLES)]
         pred_mean = np.mean(pred, axis=0)
         pred_std = np.std(pred, axis=0)
+        return pred_mean, pred_std
+    
+    
+class MLPNormal(BaseEstimator, RegressorMixin):  
+    def __init__(self):
+        pass
+    
+    def fit(self, X, y):
+        input_ = Input(shape=(X.shape[-1],))
+        x = Dense(512, activation='relu')(input_)
+        x = Dropout(0.5)(x)
+        x = Dense(512, activation='relu')(x)
+        x = Dropout(0.5)(x)
+        mean = Dense(1, activation='linear')(x)
+        std = Dense(1, activation=lambda y: K.exp(y))(x)
+        out = concatenate([mean, std])
+
+        self.model = Model(inputs=[input_], outputs=[out])
+
+        def normalLL(yTrue,yPred):
+            mean = yPred[:,0]
+            std = yPred[:,1]
+            return -K.mean(Normal(mean, std).log_prob(yTrue))
+
+        self.model.compile(loss=normalLL,
+              optimizer=Adam(),
+              metrics=['mse'])
+
+        self.model.fit(X, y,
+                    batch_size=BATCH_SIZE,
+                    epochs=N_EPOCHS,
+                    verbose=0)
+        
+        return self
+
+    def predict(self, X, y=None):
+        pred_mean = self.model.predict(X)[:,0]
+        pred_std = np.log(self.model.predict(X)[:,1])
         return pred_mean, pred_std
     
     
