@@ -55,7 +55,6 @@ def eval_dataset_model(d, X, y, model):
         d, 
         model.__name__,
         X.shape,
-        cv_metrics,
         *zip(metrics_mean, metrics_stderr)
     )
     print(r)

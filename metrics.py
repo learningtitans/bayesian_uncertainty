@@ -8,7 +8,7 @@ Results = namedtuple('Results', 'datetime dataset model shape normal_nll rmse ma
 
 def normal_nll(actual, pred, std):
     error = np.array(actual) - np.array(pred)
-    std[std <= 0.0] = 1e-30
+    std[std <= 1e-30] = 1e-30
     return -stats.norm.logpdf(error, loc=0, scale=std).mean()
 
 
