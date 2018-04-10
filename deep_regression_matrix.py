@@ -12,7 +12,7 @@ datasets = make_datasets(year=False)
 
 models = [MLPNormal, MLPBaseline, MLPBayesianDropout]
     
-results = [eval_dataset_model(d, X, y, m) for (d, (X, y)), m in product(datasets.items(), models)]
+results = [eval_dataset_model(d, X, y, m) for (d, (X, y)), m in product(reversed(datasets.items()), models)]
 
 with open('deep_results.pkl', 'wb') as f:
     pickle.dump(results, f, protocol=pickle.HIGHEST_PROTOCOL)
