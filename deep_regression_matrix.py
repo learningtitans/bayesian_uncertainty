@@ -8,11 +8,11 @@ from datasets import make_datasets
 from metrics import eval_dataset_model, Results, normal_nll, rmse, mae, auc_rmse, auc_mae
 from deep_models import MLPNormal, MLPBaseline, MLPBayesianDropout
 
-datasets = make_datasets(year=False)
+datasets = make_datasets(year=True, fake=True)
 
 models = [MLPNormal, MLPBaseline, MLPBayesianDropout]
     
-results = [eval_dataset_model(d, X, y, m) for (d, (X, y)), m in product(reversed(datasets.items()), models)]
+results = [eval_dataset_model(d, m) for d, m in product(datasets, models)]
 
 with open('deep_results.pkl', 'wb') as f:
     pickle.dump(results, f, protocol=pickle.HIGHEST_PROTOCOL)

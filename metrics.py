@@ -1,28 +1,32 @@
 import numpy as np
 from scipy import stats, optimize
 from collections import namedtuple
+import time
 
 from sklearn.model_selection import cross_validate, ShuffleSplit, KFold, RepeatedKFold
 from sklearn.metrics import make_scorer
 from sklearn.preprocessing import StandardScaler
 from datetime import datetime
 
-Results = namedtuple('Results', 'datetime dataset model shape normal_nll normal_nll_opt rmse auc_rmse auc_rmse_norm')
+import datasets
+
+Results = namedtuple('Results', 'datetime dataset model shape train_time test_time normal_nll normal_nll_opt normal_nll_opt2 normal_nll_opt3 normal_nll_opt4 normal_nll_opt5 normal_nll_opt6 rmse auc_rmse auc_rmse_norm')
 
 
-def eval_dataset_model(d, X, y, model):    
+def eval_dataset_model(dataset, model):    
     try:
-        X = X.values
+        X, y = getattr(datasets, dataset)()
+        X = X.values.astype(np.float64)
         y = y.values
     except AttributeError:
         pass
     
-    if d == 'year':
+    if dataset == 'year':
         cv = ShuffleSplit(1, test_size=0.1)
-    elif d == 'protein':
+    elif dataset == 'protein':
         cv = KFold(n_splits=3)
-    elif d.startswith('make'):
-        cv = KFold(n_splits=5)#ShuffleSplit(1, test_size=0.8)
+    elif dataset.startswith('make'):
+        cv = ShuffleSplit(1, test_size=0.9)
     else:
         cv = RepeatedKFold(n_splits=10, n_repeats=4)
     
@@ -30,19 +34,47 @@ def eval_dataset_model(d, X, y, model):
     scaler_X = StandardScaler()
     scaler_y = StandardScaler()
     cv_metrics = []
+    
     for train_index, test_index in cv.split(X):
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
         X_train = scaler_X.fit_transform(X_train)
         y_train = np.ravel(scaler_y.fit_transform(y_train.reshape(-1, 1)))
+        
+        start = time.time()
         reg.fit(X_train, y_train)
+        train_time = time.time() - start
+        
+        train_mean, train_std = reg.predict(X_train)
+        train_mean = np.ravel(scaler_y.inverse_transform(train_mean))
+        train_std *= np.sqrt(scaler_y.var_)
+        a, b = optimal_scaling(y_train, train_mean, train_std)  
+        c = optimal_scaling2(y_train, train_mean, train_std)
+        d = np.mean(y_train - train_mean)
+        
         X_test = scaler_X.transform(X_test)
+        
+        start = time.time()
         pred_mean, pred_std = reg.predict(X_test)
+        test_time = time.time() - start
+        
         pred_mean = np.ravel(scaler_y.inverse_transform(pred_mean))
         pred_std *= np.sqrt(scaler_y.var_)
+        optimal_mean = pred_mean - a
+        optimal_std = b*pred_std
+        optimal_std2 = c*pred_std
+        optimal_mean2 = pred_std - d
+
         cv_metrics.append((
+            train_time,
+            test_time,
             normal_nll(y_test, pred_mean, pred_std),
-            normal_nll_opt(y_test, pred_mean, pred_std),
+            normal_nll(y_test, optimal_mean, pred_std),
+            normal_nll(y_test, pred_mean, optimal_std),
+            normal_nll(y_test, optimal_mean, optimal_std),
+            normal_nll(y_test, pred_mean, optimal_std2),
+            normal_nll(y_test, optimal_mean2, pred_std),
+            normal_nll(y_test, optimal_mean2, optimal_std2),
             rmse(y_test, pred_mean),
             auc_rmse(y_test, pred_mean, pred_std),
             auc_rmse_norm(y_test, pred_mean, pred_std)))
@@ -52,7 +84,7 @@ def eval_dataset_model(d, X, y, model):
 
     r = Results(
         str(datetime.now()),
-        d, 
+        dataset, 
         model.__name__,
         X.shape,
         *zip(metrics_mean, metrics_stderr)
@@ -67,12 +99,20 @@ def normal_nll(actual, pred, std):
     return -stats.norm.logpdf(error, loc=0, scale=std).mean()
 
 
-def normal_nll_opt(actual, pred, std):
-    error = np.array(actual) - np.array(pred)
-    std[std <= 1e-30] = 1e-30
-    func = lambda x: -stats.norm.logpdf(error, loc=x[0], scale=x[1]*std).mean()
-    x, f, d = optimize.fmin_l_bfgs_b(func, np.array([0.0, 1.0]), bounds=[(None, None), (0, None)], approx_grad=True)
-    return f
+def optimal_scaling(y_train, train_mean, train_std):
+    error = np.array(y_train) - np.array(train_mean)
+    train_std[train_std <= 1e-30] = 1e-30
+    func = lambda x: -stats.norm.logpdf(error, loc=x[0], scale=np.clip(x[1]*train_std, 1e-60, None)).mean()
+    x, f, d = optimize.fmin_l_bfgs_b(func, np.array([0.0, 1.0]), bounds=[(None, None), (1e-30, None)], approx_grad=True, m=25, factr=10.0)
+    return x[0], x[1]
+    
+
+def optimal_scaling2(y_train, train_mean, train_std):
+    error = np.array(y_train) - np.array(train_mean)
+    train_std[train_std <= 1e-30] = 1e-30
+    func = lambda x: -stats.norm.logpdf(error, loc=0.0, scale=np.exp(x[0])*train_std).mean()
+    x, f, d = optimize.fmin_l_bfgs_b(func, np.array([0.0]), bounds=[(None, None)], approx_grad=True, m=25, factr=10.0)
+    return np.exp(x[0])
 
 
 def rmse(actual, pred):

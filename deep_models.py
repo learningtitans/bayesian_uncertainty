@@ -8,24 +8,34 @@ from keras.datasets import mnist
 from keras.models import Sequential, Model
 from keras.layers import Dense, Dropout, Input, concatenate
 from keras.optimizers import Adam
+from keras.regularizers import l2
 
 from tensorflow.contrib.distributions import Normal
 
-BATCH_SIZE = 1000
-N_EPOCHS = 50
-BD_SAMPLES = 50
+BATCH_SIZE = 256
+N_EPOCHS = 40
+BD_SAMPLES = 1000
+N_HIDDEN = 50
+DROPOUT = 0.05
 
-
+def l2_reg(N):
+    tau = 192.482910156 # obtained from https://github.com/yaringal/DropoutUncertaintyExps
+    lengthscale = 1e-2
+    return lengthscale**2 * (1 - DROPOUT) / (2. * N * tau)
+            
+    
 class MLPBayesianDropout(BaseEstimator, RegressorMixin):  
     def __init__(self):
         pass
     
-    def fit(self, X, y):
+    def fit(self, X, y):        
+        reg = l2_reg(X.shape[0])
+                               
         self.model = Sequential()
-        self.model.add(Dense(512, activation='relu', input_shape=(X.shape[-1],)))
-        self.model.add(Lambda(lambda x: K.dropout(x, level=0.5)))
-        self.model.add(Dense(512, activation='relu'))
-        self.model.add(Lambda(lambda x: K.dropout(x, level=0.5)))
+        self.model.add(Dense(N_HIDDEN, activation='relu', kernel_regularizer=l2(reg), input_shape=(X.shape[-1],)))
+        self.model.add(Lambda(lambda x: K.dropout(x, level=DROPOUT)))
+        self.model.add(Dense(N_HIDDEN, activation='relu', kernel_regularizer=l2(reg)))
+        self.model.add(Lambda(lambda x: K.dropout(x, level=DROPOUT)))
         self.model.add(Dense(1, activation='linear'))
 
         self.model.compile(loss='mean_squared_error',
@@ -51,11 +61,13 @@ class MLPNormal(BaseEstimator, RegressorMixin):
         pass
     
     def fit(self, X, y):
+        reg = l2_reg(X.shape[0])
+
         input_ = Input(shape=(X.shape[-1],))
-        x = Dense(512, activation='relu')(input_)
-        x = Dropout(0.5)(x)
-        x = Dense(512, activation='relu')(x)
-        x = Dropout(0.5)(x)
+        x = Dense(N_HIDDEN, activation='relu', kernel_regularizer=l2(reg),)(input_)
+        x = Dropout(DROPOUT)(x)
+        x = Dense(N_HIDDEN, activation='relu', kernel_regularizer=l2(reg),)(x)
+        x = Dropout(DROPOUT)(x)
         mean = Dense(1, activation='linear')(x)
         std = Dense(1, activation=lambda y: K.exp(y))(x)
         out = concatenate([mean, std])
@@ -89,11 +101,13 @@ class MLPBaseline(BaseEstimator, RegressorMixin):
         pass
     
     def fit(self, X, y):
+        reg = l2_reg(X.shape[0])
+
         self.model = Sequential()
-        self.model.add(Dense(512, activation='relu', input_shape=(X.shape[-1],)))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(512, activation='relu'))
-        self.model.add(Dropout(0.5))
+        self.model.add(Dense(N_HIDDEN, activation='relu', kernel_regularizer=l2(reg), input_shape=(X.shape[-1],)))
+        self.model.add(Dropout(DROPOUT))
+        self.model.add(Dense(N_HIDDEN, activation='relu', kernel_regularizer=l2(reg)))
+        self.model.add(Dropout(DROPOUT))
         self.model.add(Dense(1, activation='linear'))
 
         self.model.compile(loss='mean_squared_error',
