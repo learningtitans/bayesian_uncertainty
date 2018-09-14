@@ -3,12 +3,11 @@ from scipy import stats, optimize
 from collections import namedtuple
 import time
 
-from sklearn.model_selection import cross_validate, ShuffleSplit, KFold, RepeatedKFold
-from sklearn.metrics import make_scorer
+from sklearn.model_selection import ShuffleSplit, KFold, RepeatedKFold
 from sklearn.preprocessing import StandardScaler
 from datetime import datetime
 
-import datasets
+from src.bayesian_uncertainty import datasets
 
 Results = namedtuple('Results', 'datetime dataset model shape train_time test_time normal_nll normal_nll_opt normal_nll_opt2 normal_nll_opt3 normal_nll_opt4 normal_nll_opt5 normal_nll_opt6 rmse auc_rmse auc_rmse_norm')
 

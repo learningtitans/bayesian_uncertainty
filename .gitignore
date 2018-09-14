@@ -2,3 +2,4 @@ datasets/
 MNIST_data/
 .ipynb_checkpoints/
 __pycache__/
+.idea/

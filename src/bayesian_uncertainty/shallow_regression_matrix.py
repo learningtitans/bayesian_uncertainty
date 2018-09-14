@@ -1,13 +1,11 @@
 from joblib import Parallel, delayed
-import numpy as np
-import scipy
 import pickle
 import json
 from itertools import product
 
-from datasets import make_datasets
-from metrics import eval_dataset_model, Results, normal_nll, rmse, mae, auc_rmse, auc_mae
-from shallow_models import LinearRegression, BayesianLinearRegression, RFBaseline, RFUncertainty, GBTQuantile, XGBaseline, XGBLogLikelihood
+from src.bayesian_uncertainty.datasets import make_datasets
+from src.bayesian_uncertainty.metrics import eval_dataset_model
+from src.bayesian_uncertainty.shallow_models import LinearRegression, BayesianLinearRegression, RFBaseline, RFUncertainty, GBTQuantile, XGBaseline, XGBLogLikelihood
 
 datasets = make_datasets(year=True, fake=True)
 
