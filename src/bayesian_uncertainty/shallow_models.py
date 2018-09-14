@@ -5,7 +5,8 @@ from sklearn.base import BaseEstimator, RegressorMixin
 import numpy as np
 import scipy.stats
 
-class LinearRegression(BaseEstimator, RegressorMixin):  
+
+class LinearRegression(BaseEstimator, RegressorMixin):
     def __init__(self):
         self.lr = linear_model.LinearRegression() 
 
@@ -30,7 +31,7 @@ class BayesianLinearRegression(BaseEstimator, RegressorMixin):
         return self
 
     def predict(self, X, y=None):
-        pred_mean, pred_std= self.blr.predict(X, return_std=True)
+        pred_mean, pred_std = self.blr.predict(X, return_std=True)
         return pred_mean, pred_std
     
     
