@@ -73,7 +73,7 @@ def make_friedman3():
 
 
 def make_flight():
-
+    pass
 
 
 def make_datasets(year=False, fake=False, flight=False):

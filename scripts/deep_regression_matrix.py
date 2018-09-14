@@ -1,4 +1,3 @@
-import pickle
 import json
 from itertools import product
 
@@ -12,8 +11,5 @@ models = [MLPNormal, MLPBaseline, MLPBayesianDropout]
     
 results = [eval_dataset_model(d, m) for d, m in product(datasets, models)]
 
-with open('deep_results.pkl', 'wb') as f:
-    pickle.dump(results, f, protocol=pickle.HIGHEST_PROTOCOL)
-
 with open('deep_results.json', 'w') as f:
-    f.write(json.dumps(results))
+    f.write(json.dumps(results, indent=4))
