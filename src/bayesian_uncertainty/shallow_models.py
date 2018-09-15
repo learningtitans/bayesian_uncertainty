@@ -1,4 +1,5 @@
 from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
 from sklearn import linear_model
 from sklearn import ensemble
 from sklearn.base import BaseEstimator, RegressorMixin
@@ -129,6 +130,8 @@ class XGBLogLikelihood(BaseEstimator, RegressorMixin):
         self.learning_rate = learning_rate
         self.max_depth = max_depth
         self.subsample = subsample
+        self.xgb_mean = None
+        self.xgb_log_var = None
 
     def fit(self, X, y):
         self.xgb_mean = XGBRegressor(n_estimators=self.n_estimators, learning_rate=self.learning_rate, max_depth=self.max_depth, subsample=self.subsample)
@@ -141,4 +144,27 @@ class XGBLogLikelihood(BaseEstimator, RegressorMixin):
     def predict(self, X, y=None):
         pred_mean = self.xgb_mean.predict(X)
         pred_std = np.exp(self.xgb_log_var.predict(X)/2)
+        return pred_mean, pred_std
+
+
+class LGBMUncertainty(BaseEstimator, RegressorMixin):
+
+    def __init__(self, **kwargs):
+        self.lgb = LGBMRegressor(**kwargs)
+
+    def fit(self, X, y):
+        self.lgb.fit(X, y)
+        return self
+
+    def predict(self, X, y=None):
+        pred = self.lgb.predict(X, pred_leaf=True)
+
+        ind_pred = []
+        for row in pred:
+            ind_pred.append([self.lgb.booster_.get_leaf_output(i, j) for i, j in enumerate(row)])
+        ind_pred = np.vstack(ind_pred)
+
+        pred_mean = ind_pred.sum(axis=1)
+        pred_std = ind_pred.std(axis=1)
+
         return pred_mean, pred_std

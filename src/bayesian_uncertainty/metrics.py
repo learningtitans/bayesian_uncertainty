@@ -98,6 +98,10 @@ def normal_nll(actual, pred, std):
     return -stats.norm.logpdf(error, loc=0, scale=std).mean()
 
 
+def nlpd(actual, pred_mean, pred_std):
+    return -scipy.stats.norm(pred_meanmean, pred_std).logpdf(actual).mean()
+
+
 def optimal_scaling(y_train, train_mean, train_std):
     error = np.array(y_train) - np.array(train_mean)
     train_std[train_std <= 1e-30] = 1e-30
