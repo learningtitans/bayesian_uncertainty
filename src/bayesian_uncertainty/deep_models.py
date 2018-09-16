@@ -1,10 +1,8 @@
 from sklearn.base import BaseEstimator, RegressorMixin
 import numpy as np
-import scipy.stats
 
 from keras.layers.core import Lambda
 from keras import backend as K
-from keras.datasets import mnist
 from keras.models import Sequential, Model
 from keras.layers import Dense, Dropout, Input, concatenate
 from keras.optimizers import Adam
@@ -19,7 +17,7 @@ N_HIDDEN = 50
 DROPOUT = 0.05
 
 def l2_reg(N):
-    tau = 192.482910156 # obtained from https://github.com/yaringal/DropoutUncertaintyExps
+    tau = 192.482910156  # obtained from https://github.com/yaringal/DropoutUncertaintyExps
     lengthscale = 1e-2
     return lengthscale**2 * (1 - DROPOUT) / (2. * N * tau)
             
@@ -128,4 +126,3 @@ class MLPBaseline(BaseEstimator, RegressorMixin):
         pred_mean = self.model.predict(X).reshape(-1) 
         pred_std = self.std * np.ones(len(pred_mean))
         return pred_mean, pred_std
-    

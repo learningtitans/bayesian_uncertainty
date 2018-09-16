@@ -1,101 +1,120 @@
-from collections import OrderedDict, namedtuple
+import numpy as np
 import pandas as pd
-from sklearn.datasets import load_boston, \
-    make_regression as mr, make_friedman1 as mf1, make_friedman2 as mf2, make_friedman3 as mf3
+from sklearn.datasets import load_boston
+from sklearn.model_selection import ShuffleSplit, KFold, RepeatedKFold
+import os
 
-
-Data = namedtuple('Data', 'X y')
+datasets_folder = os.path.join(os.path.dirname(__file__), '../../data/datasets')
 
 
 def boston():
-    return Data(load_boston()['data'], load_boston()['target'])
+    X = load_boston()['data']
+    y = load_boston()['target']
+    cv = RepeatedKFold(n_splits=10, n_repeats=4)
+    return X, y, cv.split(X)
 
 
 def concrete():
-    df = pd.read_csv('datasets/concrete_data.csv')
-    return Data(df.iloc[:, :-1], df.iloc[:, -1])
+    df = pd.read_csv(f'{datasets_folder}/concrete_data.csv')
+    X = df.iloc[:, :-1]
+    y = df.iloc[:, -1]
+    cv = RepeatedKFold(n_splits=10, n_repeats=4)
+    return X, y, cv.split(X)
 
 
 def energy():
-    df = pd.read_csv('datasets/energy_efficiency.csv')
-    return Data(df.iloc[:, :-2], df.iloc[:, -2])
+    df = pd.read_csv(f'{datasets_folder}/energy_efficiency.csv')
+    X = df.iloc[:, :-2]
+    y = df.iloc[:, -2]
+    cv = RepeatedKFold(n_splits=10, n_repeats=4)
+    return X, y, cv.split(X)
 
 
 def kin8nm():
-    df = pd.read_csv('datasets/kin8nm.csv')
-    return Data(df.iloc[:, :-1], df.iloc[:, -1])
-
+    df = pd.read_csv(f'{datasets_folder}/kin8nm.csv')
+    X = df.iloc[:, :-1]
+    y = df.iloc[:, -1]
+    cv = RepeatedKFold(n_splits=10, n_repeats=4)
+    return X, y, cv.split(X)
 
 def naval():
-    df = pd.read_table('datasets/naval.txt', sep='\s+', header=None)
-    return Data(df.iloc[:, :-2], df.iloc[:, -2])
+    df = pd.read_table(f'{datasets_folder}/naval.txt', sep='\s+', header=None)
+    X = df.iloc[:, :-2]
+    y = df.iloc[:, -2]
+    cv = RepeatedKFold(n_splits=10, n_repeats=4)
+    return X, y, cv.split(X)
 
 
 def power():
-    df = pd.read_csv('datasets/power.csv')
-    return Data(df.iloc[:, :-1], df.iloc[:, -1])
-
-
-def protein():
-    df = pd.read_csv('datasets/protein.csv')
-    return Data(df.iloc[:, 1:], df.iloc[:, 0])
+    df = pd.read_csv(f'{datasets_folder}/power.csv')
+    X = df.iloc[:, :-1]
+    y = df.iloc[:, -1]
+    cv = RepeatedKFold(n_splits=10, n_repeats=4)
+    return X, y, cv.split(X)
 
 
 def wine():
-    df = pd.read_csv('datasets/wine.csv', sep=';')
-    return Data(df.iloc[:, :-1], df.iloc[:, -1])
+    df = pd.read_csv(f'{datasets_folder}/wine.csv', sep=';')
+    X = df.iloc[:, :-1]
+    y = df.iloc[:, -1]
+    cv = RepeatedKFold(n_splits=10, n_repeats=4)
+    return X, y, cv.split(X)
 
 
 def yacht():
-    df = pd.read_table('datasets/yacht.txt', sep='\s+', header=None)
-    return Data(df.iloc[:, :-1], df.iloc[:, -1])
+    df = pd.read_table(f'{datasets_folder}/yacht.txt', sep='\s+', header=None)
+    X = df.iloc[:, :-1]
+    y = df.iloc[:, -1]
+    cv = RepeatedKFold(n_splits=10, n_repeats=4)
+    return X, y, cv.split(X)
+
+
+def protein():
+    df = pd.read_csv(f'{datasets_folder}/protein.csv')
+    X = df.iloc[:, 1:]
+    y = df.iloc[:, 0]
+    cv = KFold(n_splits=3)
+    return X, y, cv.split(X)
 
 
 def year():
-    df = pd.read_table('datasets/year.txt', sep=',', header=None)
-    return Data(df.iloc[:, 1:], df.iloc[:, 0])
+    df = pd.read_table(f'{datasets_folder}/year.txt', sep=',', header=None)
+    X = df.iloc[:, 1:]
+    y = df.iloc[:, 0]
+    cv = ShuffleSplit(1, test_size=0.1)
+    return X, y, cv.split(X)
 
 
-def make_regression():
-    return Data(*mr(100000, noise=1.0))
+def flight():
+    train_target = np.load(f'{datasets_folder}/flights/flights-700k-train-targets.npy').squeeze()
+    test_target = np.load(f'{datasets_folder}/flights/flights-700k-test-targets.npy').squeeze()
+    train_input = np.load(f'{datasets_folder}/flights/flights-700k-train-inputs.npy')
+    test_input = np.load(f'{datasets_folder}/flights/flights-700k-test-inputs.npy')
+
+    X = np.vstack((train_input, test_input))
+    y = np.concatenate((train_target, test_target))
+    splits = [(np.arange(0, len(train_target)), np.arange(len(train_target), len(y)))]
+
+    return X, y, splits
 
 
-def make_friedman1():
-    return Data(*mf1(100000, noise=1.0))
-
-
-def make_friedman2():
-    return Data(*mf2(100000, noise=1.0))
-
-
-def make_friedman3():
-    return Data(*mf3(100000, noise=1.0))
-
-
-def make_flight():
-    pass
-
-
-def make_datasets(year=False, fake=False, flight=False):
+def make_regression_datasets(make_year=False, make_flight=False):
     datasets = list()
-    datasets.append('boston')
-    datasets.append('concrete')
-    datasets.append('energy')
-    datasets.append('kin8nm')
-    datasets.append('naval')
-    datasets.append('power')
-    datasets.append('protein')
-    datasets.append('wine')
-    datasets.append('yacht')
+    datasets.append(boston)
+    datasets.append(concrete)
+    datasets.append(energy)
+    datasets.append(kin8nm)
+    datasets.append(naval)
+    datasets.append(power)
+    datasets.append(protein)
+    datasets.append(wine)
+    datasets.append(yacht)
     
-    if year:
-        datasets.append('year')
-        
-    if fake:
-        datasets.append('make_regression')
-        datasets.append('make_friedman1')
-        datasets.append('make_friedman2')
-        datasets.append('make_friedman3')
+    if make_year:
+        datasets.append(year)
+
+    if make_flight:
+        datasets.append(flight)
 
     return datasets
 

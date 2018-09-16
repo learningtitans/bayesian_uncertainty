@@ -8,8 +8,9 @@ import scipy.stats
 
 
 class LinearRegression(BaseEstimator, RegressorMixin):
-    def __init__(self):
-        self.lr = linear_model.LinearRegression() 
+
+    def __init__(self, **kwargs):
+        self.lr = linear_model.LinearRegression(**kwargs)
 
     def fit(self, X, y):
         self.lr.fit(X, y)
@@ -23,9 +24,10 @@ class LinearRegression(BaseEstimator, RegressorMixin):
         return pred_mean, pred_std
     
     
-class BayesianLinearRegression(BaseEstimator, RegressorMixin):  
-    def __init__(self):
-        self.blr = linear_model.BayesianRidge() 
+class BayesianLinearRegression(BaseEstimator, RegressorMixin):
+
+    def __init__(self, **kwargs):
+        self.blr = linear_model.BayesianRidge(**kwargs)
 
     def fit(self, X, y):
         self.blr.fit(X, y)
@@ -36,12 +38,13 @@ class BayesianLinearRegression(BaseEstimator, RegressorMixin):
         return pred_mean, pred_std
     
     
-class GBTQuantile(BaseEstimator, RegressorMixin):  
-    def __init__(self):
+class GBTQuantile(BaseEstimator, RegressorMixin):
+
+    def __init__(self, **kwargs):
         percentile = scipy.stats.norm.cdf(-1) # One Gaussian std
-        self.gbt_lower = ensemble.GradientBoostingRegressor(loss='quantile', alpha=percentile)
-        self.gbt_upper = ensemble.GradientBoostingRegressor(loss='quantile', alpha=1-percentile)
-        self.gbt_median = ensemble.GradientBoostingRegressor(loss='quantile', alpha=0.5)
+        self.gbt_lower = ensemble.GradientBoostingRegressor(loss='quantile', alpha=percentile, **kwargs)
+        self.gbt_upper = ensemble.GradientBoostingRegressor(loss='quantile', alpha=1-percentile, **kwargs)
+        self.gbt_median = ensemble.GradientBoostingRegressor(loss='quantile', alpha=0.5, **kwargs)
         
     def fit(self, X, y):
         self.gbt_lower.fit(X, y)
@@ -56,8 +59,9 @@ class GBTQuantile(BaseEstimator, RegressorMixin):
 
 
 class RFBaseline(BaseEstimator, RegressorMixin):
-    def __init__(self):
-        self.rf = ensemble.RandomForestRegressor(n_estimators=100)
+
+    def __init__(self, **kwargs):
+        self.rf = ensemble.RandomForestRegressor(**kwargs)
         
     def fit(self, X, y):
         self.rf.fit(X, y)
@@ -75,8 +79,8 @@ class RFUncertainty(BaseEstimator, RegressorMixin):
     """
     Based on: http://blog.datadive.net/prediction-intervals-for-random-forests/
     """
-    def __init__(self):
-        self.rf = ensemble.RandomForestRegressor(n_estimators=100)
+    def __init__(self, **kwargs):
+        self.rf = ensemble.RandomForestRegressor(**kwargs)
         
     def fit(self, X, y):
         self.rf.fit(X, y)
@@ -95,15 +99,12 @@ class RFUncertainty(BaseEstimator, RegressorMixin):
         return pred_mean, pred_std
 
 
-class XGBaseline(BaseEstimator, RegressorMixin):  
-    def __init__(self, n_estimators=100, learning_rate=0.1, max_depth=3, subsample=1):
-        self.n_estimators = n_estimators
-        self.learning_rate = learning_rate
-        self.max_depth = max_depth
-        self.subsample = subsample
+class XGBaseline(BaseEstimator, RegressorMixin):
+
+    def __init__(self, **kwargs):
+        self.xgb_mean = XGBRegressor(**kwargs)
 
     def fit(self, X, y):
-        self.xgb_mean = XGBRegressor(n_estimators=self.n_estimators, learning_rate=self.learning_rate, max_depth=self.max_depth, subsample=self.subsample)
         self.xgb_mean.fit(X, y)
         errors = y - self.xgb_mean.predict(X)
         self.std = np.std(errors)
@@ -125,17 +126,11 @@ def ll_objective(y_true, y_pred):
 
 class XGBLogLikelihood(BaseEstimator, RegressorMixin):  
     
-    def __init__(self, n_estimators=100, learning_rate=0.1, max_depth=3, subsample=1):
-        self.n_estimators = n_estimators
-        self.learning_rate = learning_rate
-        self.max_depth = max_depth
-        self.subsample = subsample
-        self.xgb_mean = None
-        self.xgb_log_var = None
+    def __init__(self, **kwargs):
+        self.xgb_mean = XGBRegressor(**kwargs)
+        self.xgb_log_var = XGBRegressor(objective=ll_objective, **kwargs)
 
     def fit(self, X, y):
-        self.xgb_mean = XGBRegressor(n_estimators=self.n_estimators, learning_rate=self.learning_rate, max_depth=self.max_depth, subsample=self.subsample)
-        self.xgb_log_var = XGBRegressor(objective=ll_objective, n_estimators=self.n_estimators, learning_rate=self.learning_rate, max_depth=self.max_depth, subsample=self.subsample)
         self.xgb_mean.fit(X, y)
         errors = y - self.xgb_mean.predict(X)
         self.xgb_log_var.fit(X, errors)        
