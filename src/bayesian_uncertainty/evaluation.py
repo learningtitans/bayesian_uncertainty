@@ -1,7 +1,9 @@
 import time
-import logging
+import logging.config
 import toolz as fp
 import pandas as pd
+import json
+import pkgutil
 
 from sklearn.model_selection import KFold
 from datetime import datetime
@@ -9,10 +11,15 @@ from datetime import datetime
 from .metrics import nlpd, rmse, auc_rmse, auc_rmse_norm
 from .uncertainty_calibration import UncertaintyCalibrator
 
+logging.config.dictConfig(json.loads(pkgutil.get_data("bayesian_uncertainty", "resources/logging.json")))
 logger = logging.getLogger("bayesian_uncertainty")
 
 
 def eval_dataset_model(dataset, model, calibrate_uncertainty=False, uncertainty_calibrator_cv=None):
+    model_name = type(model).__name__
+    dataset_name = dataset.__name__
+    logger.info(f"Starting evaluation of model {model_name} on dataset {dataset_name}")
+
     X, y, splits = dataset()
 
     if type(X) is pd.DataFrame:
@@ -54,14 +61,14 @@ def eval_dataset_model(dataset, model, calibrate_uncertainty=False, uncertainty_
 
     results = {
         "current_time": str(datetime.now()),
-        "dataset": dataset.__name__,
-        "model": type(model).__name__,
+        "dataset": dataset_name,
+        "model": model_name,
         "shape": X.shape,
         "metrics_df": metrics_df.to_dict(),
         "metrics_mean": metrics_mean.to_dict(),
         "metrics_stderr": metrics_stderr.to_dict()
     }
 
-    logger.info(fp.dissoc(results, "metrics_df"))
+    logger.info(f"{dataset_name}-{model_name}:\n{metrics_mean}")
 
     return results

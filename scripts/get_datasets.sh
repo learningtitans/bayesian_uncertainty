@@ -9,5 +9,4 @@ unzip ../data/YearPredictionMSD.txt.zip -d ../data/
 mv ../data/YearPredictionMSD.txt ../data/datasets/year.txt
 
 # Flight delay dataset
-mkdir ../data/datasets/flights
-unzip ../data/flight-delay-dataset.zip -d ../data/datasets/flights
+unzip ../data/flight-delay-dataset.zip -d ../data/datasets

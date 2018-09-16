@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "disable_existing_loggers": true,
+  "formatters": {
+    "default": {
+      "format": "%(asctime)s %(levelname)s %(message)s",
+      "datefmt": "%Y-%m-%dT%H:%M:%S%z"
+    }
+  },
+  "handlers": {
+    "console": {
+      "level": "DEBUG",
+      "class": "logging.StreamHandler",
+      "formatter": "default"
+    }
+  },
+  "loggers": {
+    "bayesian_uncertainty": {
+      "handlers": [
+        "console"
+      ],
+      "level": "DEBUG",
+      "propagate": false
+    }
+  }
+}
