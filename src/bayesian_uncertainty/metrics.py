@@ -1,8 +1,11 @@
 import numpy as np
 from scipy import stats
 
+EPSILON = 1e-30
+
 
 def nlpd(actual, pred_mean, pred_std):
+    pred_std[pred_std < EPSILON] = EPSILON
     return -stats.norm(pred_mean, pred_std).logpdf(actual).mean()
 
 

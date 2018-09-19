@@ -9,15 +9,24 @@
   },
   "handlers": {
     "console": {
-      "level": "DEBUG",
+      "level": "INFO",
       "class": "logging.StreamHandler",
       "formatter": "default"
+    },
+    "file_handler": {
+      "level": "DEBUG",
+      "class": "logging.handlers.WatchedFileHandler",
+      "formatter": "default",
+      "filename": "/tmp/bayesian_uncertainty.log",
+      "mode": "w",
+      "encoding": "utf-8"
     }
   },
   "loggers": {
     "bayesian_uncertainty": {
       "handlers": [
-        "console"
+        "console",
+        "file_handler"
       ],
       "level": "DEBUG",
       "propagate": false

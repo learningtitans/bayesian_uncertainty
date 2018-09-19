@@ -22,8 +22,15 @@ class LinearRegression(BaseEstimator, RegressorMixin):
         pred_mean = self.lr.predict(X)
         pred_std = self.std * np.ones(len(pred_mean))
         return pred_mean, pred_std
-    
-    
+
+    def get_params(self, deep=True):
+        return self.lr.get_params()
+
+    def set_params(self, **params):
+        self.lr.set_params(**params)
+        return self
+
+
 class BayesianLinearRegression(BaseEstimator, RegressorMixin):
 
     def __init__(self, **kwargs):
@@ -36,8 +43,15 @@ class BayesianLinearRegression(BaseEstimator, RegressorMixin):
     def predict(self, X, y=None):
         pred_mean, pred_std = self.blr.predict(X, return_std=True)
         return pred_mean, pred_std
-    
-    
+
+    def get_params(self, deep=True):
+        return self.blr.get_params()
+
+    def set_params(self, **params):
+        self.blr.set_params(**params)
+        return self
+
+
 class GBTQuantile(BaseEstimator, RegressorMixin):
 
     def __init__(self, **kwargs):
@@ -57,6 +71,15 @@ class GBTQuantile(BaseEstimator, RegressorMixin):
         pred_std = (self.gbt_upper.predict(X) - self.gbt_lower.predict(X))/2
         return pred_mean, pred_std
 
+    def get_params(self, deep=True):
+        return self.gbt_lower.get_params()
+
+    def set_params(self, **params):
+        self.gbt_lower.set_params(**params)
+        self.gbt_upper.set_params(**params)
+        self.gbt_median.set_params(**params)
+        return self
+
 
 class RFBaseline(BaseEstimator, RegressorMixin):
 
@@ -73,8 +96,15 @@ class RFBaseline(BaseEstimator, RegressorMixin):
         pred_mean = self.rf.predict(X)
         pred_std = self.std * np.ones(len(pred_mean))
         return pred_mean, pred_std
-    
-    
+
+    def get_params(self, deep=True):
+        return self.rf.get_params()
+
+    def set_params(self, **params):
+        self.rf.set_params(**params)
+        return self
+
+
 class RFUncertainty(BaseEstimator, RegressorMixin):
     """
     Based on: http://blog.datadive.net/prediction-intervals-for-random-forests/
@@ -98,6 +128,13 @@ class RFUncertainty(BaseEstimator, RegressorMixin):
         pred_std[pred_std <= 0] = self.std
         return pred_mean, pred_std
 
+    def get_params(self, deep=True):
+        return self.rf.get_params()
+
+    def set_params(self, **params):
+        self.rf.set_params(**params)
+        return self
+
 
 class XGBaseline(BaseEstimator, RegressorMixin):
 
@@ -114,7 +151,14 @@ class XGBaseline(BaseEstimator, RegressorMixin):
         pred_mean = self.xgb_mean.predict(X)
         pred_std = self.std * np.ones(len(pred_mean))
         return pred_mean, pred_std
-    
+
+    def get_params(self, deep=True):
+        return self.xgb_mean.get_params()
+
+    def set_params(self, **params):
+        self.xgb_mean.set_params(**params)
+        return self
+
     
 def ll_objective(y_true, y_pred):
     err = y_true
@@ -128,7 +172,8 @@ class XGBLogLikelihood(BaseEstimator, RegressorMixin):
     
     def __init__(self, **kwargs):
         self.xgb_mean = XGBRegressor(**kwargs)
-        self.xgb_log_var = XGBRegressor(objective=ll_objective, **kwargs)
+        kwargs["objective"] = ll_objective
+        self.xgb_log_var = XGBRegressor(**kwargs)
 
     def fit(self, X, y):
         self.xgb_mean.fit(X, y)
@@ -140,6 +185,14 @@ class XGBLogLikelihood(BaseEstimator, RegressorMixin):
         pred_mean = self.xgb_mean.predict(X)
         pred_std = np.exp(self.xgb_log_var.predict(X)/2)
         return pred_mean, pred_std
+
+    def get_params(self, deep=True):
+        return self.xgb_mean.get_params()
+
+    def set_params(self, **params):
+        self.xgb_mean.set_params(**params)
+        self.xgb_log_var.set_params(**params)
+        return self
 
 
 class LGBMUncertainty(BaseEstimator, RegressorMixin):
@@ -163,3 +216,10 @@ class LGBMUncertainty(BaseEstimator, RegressorMixin):
         pred_std = ind_pred.std(axis=1)
 
         return pred_mean, pred_std
+
+    def get_params(self, deep=True):
+        return self.lgb.get_params()
+
+    def set_params(self, **params):
+        self.lgb.set_params(**params)
+        return self
